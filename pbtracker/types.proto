@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package pbtracker;
+
+// Node message
+message NodeMsg {
+	int32 iD = 1;                  //data node index
+	string nodeID = 2;             //data node ID, generated from PubKey
+	string pubKey = 3;             //public key of data node
+	string owner = 4;              //owner account of this miner
+	string profitAcc = 5;          //profit account of this miner
+  	string poolID = 6;             //ID of associated miner pool
+  	string poolOwner = 7;          //Owner of associated miner pool
+	int64 quota = 8;               //quota allocated by associated miner pool
+	repeated string addrs = 9;     //listening addresses of data node
+	int32 cPU = 10;                 //CPU usage of data node
+	int32 memory = 11;             //memory usage of data node
+	int32 bandwidth = 12;          //bandwidth usage of data node
+	int64 maxDataSpace = 13;       //max space of data node
+	int64 assignedSpace = 14;      //space assigned to YTFS
+	int64 productiveSpace = 15;    //pre-allocated space of data node
+  	int64 usedSpace = 16;          //used space of data node
+	double weight = 17;            //weight for allocate data node
+	int32 valid = 18;              //Is node valid
+	int32 relay = 19;              //Is relay node
+	int32 status = 20;             //status code: 0 - registered 1 - active
+	int64 timestamp = 21;          //timestamp of status updating operation
+  	int32 version = 22;            //version number of miner
+  	int32 rebuilding = 23;         //if node is under rebuilding
+  	int64 realSpace = 24;          //real space of miner
+  	int64 tx = 25;                 //tx
+  	int64 rx = 26;                 //rx
+	string ext = 27;               //other
+	map<string, int64> uspaces = 28; //used spaces on each SN
+	int32 manualWeight = 29;       //control weight manually
+}
+
+message SignMessage {
+  string accountName = 1;
+  bytes data = 2;
+  string signature = 3;
+}
