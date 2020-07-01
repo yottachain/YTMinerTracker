@@ -84,7 +84,7 @@ misc:
 $ nohup ./minertracker &
 ```
 ## 2. 数据库配置：
-需在mongoDB中建立名为`minertracker`的数据库，其包含两个表：`Auth`和`Node`，其中`Auth`表用于记录的是鉴权账号，这些账号用于第三方服务接入消息队列时的鉴权，结构如下：
+需在mongoDB中建立名为`minertracker`的数据库，其包含两张表：`Auth`和`Node`，其中`Auth`表用于记录的是鉴权账号，这些账号用于第三方服务接入消息队列时的鉴权，结构如下：
 
 | 字段 | 类型 | 描述 |
 | ---- | ---- | ---- |
@@ -116,4 +116,4 @@ $ curl -XPOST -d'{"_id": 17}' http://127.0.0.1:8080/query
 ```
 $ curl -XPOST -d'{"timestamp": {"$gt": 1593598279}}' http://127.0.0.1:8080/query
 ```
-查询后返回矿机信息的JSON数组
+POST请求体为查询条件（JSON格式的mongodb查询字符串），查询成功后返回矿机信息的JSON数组
