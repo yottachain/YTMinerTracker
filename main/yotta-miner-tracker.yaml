@@ -1,0 +1,37 @@
+http-bind-addr: ":8080"
+eos-url: "http://127.0.0.1:8888"
+mongodb-url: "mongodb://127.0.0.1:27017/?connect=direct"
+auramq:
+  server:
+    bind-addr: ":8787"
+    router-buffer-size: 8192
+    subscriber-buffer-size: 1024
+    read-buffer-size: 4096
+    write-buffer-size: 4096
+    ping-wait: 30
+    read-wait: 60
+    write-wait: 10
+    miner-sync-topic: "sync"
+  client:
+    subscriber-buffer-size: 1024
+    ping-wait: 30
+    read-wait: 60
+    write-wait: 10
+    miner-sync-topic: "sync"
+    all-sn-urls:
+    - "ws://172.17.0.2:8787/ws"
+    - "ws://172.17.0.3:8787/ws"
+    - "ws://172.17.0.4:8787/ws"
+    - "ws://172.17.0.5:8787/ws"
+    - "ws://172.17.0.6:8787/ws"
+    account: "yottanalysis"
+    private-key: "5JdrCwfnPcqFH8osGqSy52WbcSB93wc3BLWXnSDdJZ3ffyie4HT"
+    client-id: "yottaminertracker"
+logger:
+  output: "file"
+  file-path: "./tracker.log"
+  rotation-time: 24
+  max-age: 240
+  level: "Debug"
+misc:
+  refresh-auth-interval: 600

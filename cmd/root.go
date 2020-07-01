@@ -30,21 +30,11 @@ var rootCmd = &cobra.Command{
 			panic(fmt.Sprintf("unable to decode into config struct, %v\n", err))
 		}
 		initLog(config)
-		_, err := yttracker.New(config.MongoDBURL, config.EOSURL, config.AuraMQ, config.Misc)
+		tracker, err := yttracker.New(config.MongoDBURL, config.EOSURL, config.AuraMQ, config.Misc)
 		if err != nil {
 			panic(fmt.Sprintf("fatal error when starting service: %s\n", err))
 		}
-		// tracker.Start()
-		// lis, err := net.Listen("tcp", config.BindAddr)
-		// if err != nil {
-		// 	log.Fatalf("failed to listen address %s: %s\n", config.BindAddr, err)
-		// }
-		// log.Infof("GRPC address: %s", config.BindAddr)
-		// grpcServer := grpc.NewServer()
-		// server := &yttracker.Server{Rebuilder: rebuilder}
-		// pb.RegisterRebuilderServer(grpcServer, server)
-		// grpcServer.Serve(lis)
-		// log.Info("GRPC server started")
+		tracker.Start(config.HTTPBindAddr)
 	},
 }
 
@@ -187,7 +177,7 @@ var (
 	//DefaultLoggerOutput default value of LoggerOutput
 	DefaultLoggerOutput string = "stdout"
 	//DefaultLoggerFilePath default value of LoggerFilePath
-	DefaultLoggerFilePath string = "./rebuilder.log"
+	DefaultLoggerFilePath string = "./tracker.log"
 	//DefaultLoggerRotationTime default value of LoggerRotationTime
 	DefaultLoggerRotationTime int64 = 24
 	//DefaultLoggerMaxAge default value of LoggerMaxAge
@@ -196,7 +186,7 @@ var (
 	DefaultLoggerLevel string = "Info"
 
 	//DefaultMiscRefreshAuthInterval default value of auth table refreshing interval
-	DefaultMiscRefreshAuthInterval int = 60
+	DefaultMiscRefreshAuthInterval int = 600
 )
 
 func initFlag() {

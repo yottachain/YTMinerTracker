@@ -35,7 +35,6 @@ type Service struct {
 func StartSync(api *eos.API, mongoCli *mongo.Client, serverConf *ServerConfig, clientConf *ClientConfig, miscConf *MiscConfig) (*Service, error) {
 	//mqBindAddr string, serverRouterBufferSize, serverSubscriberBufferSize, serverReadBufferSize, serverWriterBufferSize, serverPingWait, serverReadWait, serverWriteWait int, serverTopic string,
 	//clientSubscriberBufferSize, clientPingWait, clientReadWait, clientWriteWait int, clientTopic string, clientAllSNURLs []string, callback func(msg *msg.Message), account, privateKey string, authRefreshInterval int) (*Service, error) {
-
 	entry := log.WithFields(log.Fields{Function: "StartSync"})
 	refreshAuth(api, mongoCli)
 	go func() {
@@ -87,7 +86,11 @@ func StartSync(api *eos.API, mongoCli *mongo.Client, serverConf *ServerConfig, c
 					return
 				}
 				node := new(Node)
-				node.Fillby(nodemsg)
+				err = node.Fillby(nodemsg)
+				if err != nil {
+					entry.WithError(err).Error("convert protobuf message to node")
+					return
+				}
 				syncNode(mongoCli, node, cli, serverConf.MinerSyncTopic)
 			}
 		}
@@ -119,27 +122,27 @@ func syncNode(cli *mongo.Client, node *Node, mqcli auramq.Client, topic string) 
 		return errors.New("miner ID cannot be 0")
 	}
 	collection := cli.Database(MinerTrackerDB).Collection(NodeTab)
-	otherDoc := bson.A{}
-	if node.Ext != "" && node.Ext[0] == '[' && node.Ext[len(node.Ext)-1] == ']' {
-		var bdoc interface{}
-		err := bson.UnmarshalExtJSON([]byte(node.Ext), true, &bdoc)
-		if err != nil {
-			entry.WithError(err).Warn("parse ext document")
-		} else {
-			otherDoc, _ = bdoc.(bson.A)
-		}
-	}
+	// otherDoc := bson.A{}
+	// if node.Ext != "" && node.Ext[0] == '[' && node.Ext[len(node.Ext)-1] == ']' {
+	// 	var bdoc interface{}
+	// 	err := bson.UnmarshalExtJSON([]byte(node.Ext), true, &bdoc)
+	// 	if err != nil {
+	// 		entry.WithError(err).Warn("parse ext document")
+	// 	} else {
+	// 		otherDoc, _ = bdoc.(bson.A)
+	// 	}
+	// }
 	if node.Uspaces == nil {
 		node.Uspaces = make(map[string]int64)
 	}
-	_, err := collection.InsertOne(context.Background(), bson.M{"_id": node.ID, "nodeid": node.NodeID, "pubkey": node.PubKey, "owner": node.Owner, "profitAcc": node.ProfitAcc, "poolID": node.PoolID, "poolOwner": node.PoolOwner, "quota": node.Quota, "addrs": node.Addrs, "cpu": node.CPU, "memory": node.Memory, "bandwidth": node.Bandwidth, "maxDataSpace": node.MaxDataSpace, "assignedSpace": node.AssignedSpace, "productiveSpace": node.ProductiveSpace, "usedSpace": node.UsedSpace, "uspaces": node.Uspaces, "weight": node.Weight, "valid": node.Valid, "relay": node.Relay, "status": node.Status, "timestamp": node.Timestamp, "version": node.Version, "rebuilding": node.Rebuilding, "realSpace": node.RealSpace, "tx": node.Tx, "rx": node.Rx, "other": otherDoc, "manualWeight": node.ManualWeight})
+	_, err := collection.InsertOne(context.Background(), bson.M{"_id": node.ID, "nodeid": node.NodeID, "pubkey": node.PubKey, "owner": node.Owner, "profitAcc": node.ProfitAcc, "poolID": node.PoolID, "poolOwner": node.PoolOwner, "quota": node.Quota, "addrs": node.Addrs, "cpu": node.CPU, "memory": node.Memory, "bandwidth": node.Bandwidth, "maxDataSpace": node.MaxDataSpace, "assignedSpace": node.AssignedSpace, "productiveSpace": node.ProductiveSpace, "usedSpace": node.UsedSpace, "uspaces": node.Uspaces, "weight": node.Weight, "valid": node.Valid, "relay": node.Relay, "status": node.Status, "timestamp": node.Timestamp, "version": node.Version, "rebuilding": node.Rebuilding, "realSpace": node.RealSpace, "tx": node.Tx, "rx": node.Rx, "other": node.Other, "manualWeight": node.ManualWeight})
 	if err != nil {
 		errstr := err.Error()
 		if !strings.ContainsAny(errstr, "duplicate key error") {
 			entry.WithError(err).Warnf("inserting miner %d to database", node.ID)
 			return err
 		}
-		cond := bson.M{"nodeid": node.NodeID, "pubkey": node.PubKey, "owner": node.Owner, "profitAcc": node.ProfitAcc, "poolID": node.PoolID, "poolOwner": node.PoolOwner, "quota": node.Quota, "addrs": node.Addrs, "cpu": node.CPU, "memory": node.Memory, "bandwidth": node.Bandwidth, "maxDataSpace": node.MaxDataSpace, "assignedSpace": node.AssignedSpace, "productiveSpace": node.ProductiveSpace, "usedSpace": node.UsedSpace, "weight": node.Weight, "valid": node.Valid, "relay": node.Relay, "status": node.Status, "timestamp": node.Timestamp, "version": node.Version, "rebuilding": node.Rebuilding, "realSpace": node.RealSpace, "tx": node.Tx, "rx": node.Rx, "other": otherDoc, "manualWeight": node.ManualWeight}
+		cond := bson.M{"nodeid": node.NodeID, "pubkey": node.PubKey, "owner": node.Owner, "profitAcc": node.ProfitAcc, "poolID": node.PoolID, "poolOwner": node.PoolOwner, "quota": node.Quota, "addrs": node.Addrs, "cpu": node.CPU, "memory": node.Memory, "bandwidth": node.Bandwidth, "maxDataSpace": node.MaxDataSpace, "assignedSpace": node.AssignedSpace, "productiveSpace": node.ProductiveSpace, "usedSpace": node.UsedSpace, "weight": node.Weight, "valid": node.Valid, "relay": node.Relay, "status": node.Status, "timestamp": node.Timestamp, "version": node.Version, "rebuilding": node.Rebuilding, "realSpace": node.RealSpace, "tx": node.Tx, "rx": node.Rx, "other": node.Other, "manualWeight": node.ManualWeight}
 		for k, v := range node.Uspaces {
 			cond[fmt.Sprintf("uspaces.%s", k)] = v
 		}
@@ -152,7 +155,12 @@ func syncNode(cli *mongo.Client, node *Node, mqcli auramq.Client, topic string) 
 			entry.WithError(err).Warnf("updating record of miner %d", node.ID)
 			return err
 		}
-		if b, err := proto.Marshal(updatedNode.Convert()); err != nil {
+		m, err := updatedNode.Convert()
+		if err != nil {
+			entry.WithError(err).Warnf("conver miner %d to protobuf message", node.ID)
+			return err
+		}
+		if b, err := proto.Marshal(m); err != nil {
 			entry.WithError(err).Errorf("marshal miner %d failed", updatedNode.ID)
 		} else {
 			mqcli.Publish(topic, b)
@@ -224,6 +232,9 @@ func refreshAuth(api *eos.API, mongoCli *mongo.Client) error {
 		if err != nil {
 			entry.WithField(AccountName, auth.Account).WithError(err).Error("fetching public key failed")
 			continue
+		}
+		if strings.HasPrefix(pubkey, "YTA") || strings.HasPrefix(pubkey, "EOS") {
+			pubkey = string(pubkey[3:])
 		}
 		if pubkey != auth.PublicKey {
 			_, err := collection.UpdateOne(context.Background(), bson.M{"_id": auth.Account}, bson.M{"$set": bson.M{"publickey": pubkey}})
