@@ -164,7 +164,7 @@ func syncNode(cli *mongo.Client, node *Node, mqcli auramq.Client, topic string) 
 			entry.WithError(err).Errorf("marshal miner %d failed", updatedNode.ID)
 		} else {
 			mqcli.Publish(topic, b)
-			entry.Infof("publishing information of miner %d", updatedNode.ID)
+			entry.Debugf("publishing information of miner %d", updatedNode.ID)
 		}
 	}
 	return nil
