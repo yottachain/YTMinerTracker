@@ -92,12 +92,11 @@ $ nohup ./minertracker &
 | publickey | string | 账号所属active公钥 |
 
 默认只需要填入`_id`对应的账号名即可，程序会自动从BP获取公钥写入数据库。注意，服务启动前需要将配置文件中`auramq.client.account`对应的账号录入数据库。
-`Node`表记录的是从SN同步过来的矿机数据，其结构与SN数据库的`yotta.Node`表相同，服务启动前需要先将SN中全部矿机数据导入该表：
-在SN端：
+`Node`表记录的是从SN同步过来的矿机数据，其结构与SN数据库的`yotta.Node`表相同，服务启动前需要先将SN中全部矿机数据导入该表，首先在SN端导出表：
 ```
 $ mongoexport -h 127.0.0.1 --port 27017 -d yotta -c Node -o node.json
 ```
-在分析服务器端：
+在本程序所连接的mongoDB导入数据：
 ```
 $ mongoimport -h 127.0.0.1 --port 27017 -d minertracker -c Node --file node.json
 ```
