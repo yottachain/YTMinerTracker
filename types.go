@@ -1,6 +1,8 @@
 package yttracker
 
 import (
+	"encoding/json"
+
 	pb "github.com/yottachain/yotta-miner-tracker/pbtracker"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -100,7 +102,7 @@ var (
 func (node *Node) Convert() (*pb.NodeMsg, error) {
 	ext := ""
 	if node.Other != nil {
-		b, err := bson.Marshal(node.Other)
+		b, err := json.Marshal(node.Other)
 		if err != nil {
 			return nil, err
 		}
