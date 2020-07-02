@@ -35,12 +35,15 @@ func New(mongoDBURL, eosURL string, mqconf *AuraMQConfig, miscconf *MiscConfig) 
 		entry.WithError(err).Errorf("creating mongo DB client failed: %s", mongoDBURL)
 		return nil, err
 	}
+	entry.Infof("mongoDB connected: %s", mongoDBURL)
 	eosAPI := eos.New(eosURL)
+	entry.Infof("EOS server connected: %s", eosURL)
 	_, err = StartSync(eosAPI, dbClient, mqconf.ServerConfig, mqconf.ClientConfig, miscconf)
 	if err != nil {
-		entry.WithError(err).Error("creating mq service failed")
+		entry.WithError(err).Error("creating MQ service failed")
 		return nil, err
 	}
+	entry.Info("sync service started")
 	server := echo.New()
 	return &MinerTracker{server: server, dbCli: dbClient, params: miscconf}, nil
 }
@@ -100,7 +103,7 @@ func (tracker *MinerTracker) QueryHandler(c echo.Context) error {
 		tracker.server.Logger.Errorf("error when reading request body: %s\n", err.Error())
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
-	entry.Debugf("query: %s", lines)
+	entry.Debugf("executing query: %s", lines)
 	q := bson.M{}
 	if len(lines) != 0 {
 		err = json.Unmarshal(lines, &q)

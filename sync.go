@@ -33,8 +33,6 @@ type Service struct {
 
 //StartSync start syncing
 func StartSync(api *eos.API, mongoCli *mongo.Client, serverConf *ServerConfig, clientConf *ClientConfig, miscConf *MiscConfig) (*Service, error) {
-	//mqBindAddr string, serverRouterBufferSize, serverSubscriberBufferSize, serverReadBufferSize, serverWriterBufferSize, serverPingWait, serverReadWait, serverWriteWait int, serverTopic string,
-	//clientSubscriberBufferSize, clientPingWait, clientReadWait, clientWriteWait int, clientTopic string, clientAllSNURLs []string, callback func(msg *msg.Message), account, privateKey string, authRefreshInterval int) (*Service, error) {
 	entry := log.WithFields(log.Fields{Function: "StartSync"})
 	refreshAuth(api, mongoCli)
 	go func() {
@@ -52,6 +50,7 @@ func StartSync(api *eos.API, mongoCli *mongo.Client, serverConf *ServerConfig, c
 	wsbroker.Run()
 	ebbroker := embed.NewBroker(router, true, syncService.auth, serverConf.SubscriberBufferSize, serverConf.SubscriberBufferSize, serverConf.SubscriberBufferSize)
 	ebbroker.Run()
+	entry.Info("MQ server created")
 
 	data := []byte(getRandomString(8))
 	signature, err := ytcrypto.Sign(clientConf.PrivateKey, data)
@@ -107,7 +106,9 @@ func StartSync(api *eos.API, mongoCli *mongo.Client, serverConf *ServerConfig, c
 					time.Sleep(time.Duration(3) * time.Second)
 					continue
 				}
+				entry.Infof("remote MQ server SN%d connected: %s", index, wsurl)
 				cli.Run()
+				entry.Infof("re-connect MQ SN%d server: %s", index, wsurl)
 				time.Sleep(time.Duration(3) * time.Second)
 			}
 		}()
@@ -122,16 +123,6 @@ func syncNode(cli *mongo.Client, node *Node, mqcli auramq.Client, topic string) 
 		return errors.New("miner ID cannot be 0")
 	}
 	collection := cli.Database(MinerTrackerDB).Collection(NodeTab)
-	// otherDoc := bson.A{}
-	// if node.Ext != "" && node.Ext[0] == '[' && node.Ext[len(node.Ext)-1] == ']' {
-	// 	var bdoc interface{}
-	// 	err := bson.UnmarshalExtJSON([]byte(node.Ext), true, &bdoc)
-	// 	if err != nil {
-	// 		entry.WithError(err).Warn("parse ext document")
-	// 	} else {
-	// 		otherDoc, _ = bdoc.(bson.A)
-	// 	}
-	// }
 	if node.Uspaces == nil {
 		node.Uspaces = make(map[string]int64)
 	}
@@ -245,6 +236,7 @@ func refreshAuth(api *eos.API, mongoCli *mongo.Client) error {
 
 	}
 	cur.Close(context.Background())
+	entry.Info("refreshed Auth table")
 	return nil
 }
 
