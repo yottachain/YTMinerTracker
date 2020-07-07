@@ -116,3 +116,6 @@ $ curl -XPOST -d'{"_id": 17}' http://127.0.0.1:8080/query
 $ curl -XPOST -d'{"timestamp": {"$gt": 1593598279}}' http://127.0.0.1:8080/query
 ```
 POST请求体为查询条件（JSON格式的mongodb查询字符串），查询成功后返回矿机信息的JSON数组
+
+## 4. 监听矿机信息
+请参照项目`example`包中的代码
