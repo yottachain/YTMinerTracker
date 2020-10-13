@@ -1,4 +1,4 @@
-# yotta-miner-tracker
+# YTMinerTracker
 
 ## 1. 部署与配置：
 
