@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -57,12 +58,79 @@ func (tracker *MinerTracker) Start(bindAddr string) error {
 		Level: 5,
 	}))
 	tracker.server.POST("/query", tracker.QueryHandler)
+	tracker.server.POST("/stablestat/reset", tracker.ResetHandler)
+	tracker.server.POST("/stablestat/refresh", tracker.RefreshHandler)
 	tracker.server.Server.Addr = bindAddr
 	err := graceful.ListenAndServe(tracker.server.Server, 5*time.Second)
 	if err != nil {
 		entry.WithError(err).Error("start tracker service failed")
 	}
 	return err
+}
+
+//RefreshHandler refresh ratio of stable statictics
+func (tracker *MinerTracker) RefreshHandler(c echo.Context) error {
+	entry := log.WithFields(log.Fields{Function: "RefreshHandler"})
+	cond := bson.M{}
+	idstr := c.QueryParam("id")
+	if idstr != "" {
+		id, err := strconv.Atoi(idstr)
+		if err != nil {
+			entry.WithError(err).Errorf("invalid param %s", idstr)
+			return c.String(http.StatusInternalServerError, err.Error())
+		}
+		cond = bson.M{"_id": id}
+	}
+	collection := tracker.dbCli.Database(MinerTrackerDB).Collection(NodeTab)
+	cur, err := collection.Find(context.Background(), cond)
+	if err != nil {
+		entry.WithError(err).Error("find miner info for refreshing")
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	defer cur.Close(context.Background())
+	for cur.Next(context.Background()) {
+		node := new(Node)
+		err := cur.Decode(node)
+		if err != nil {
+			entry.WithError(err).Error("decoding miner info")
+			continue
+		}
+		ratio := float32(node.StableStat.Counter*60) / float32(time.Now().Unix()-node.StableStat.StartTime)
+		if ratio > 1 {
+			ratio = 1
+		}
+		_, err = collection.UpdateOne(context.Background(), bson.M{"_id": node.ID}, bson.M{"$set": bson.M{"stableStat.ratio": ratio}})
+		if err != nil {
+			entry.WithError(err).Error("update ratio of miner %d", node.ID)
+			continue
+		}
+	}
+	return c.String(http.StatusOK, "success")
+}
+
+//ResetHandler reset stable statistics
+func (tracker *MinerTracker) ResetHandler(c echo.Context) error {
+	entry := log.WithFields(log.Fields{Function: "ResetHandler"})
+	cond := bson.M{}
+	idstr := c.QueryParam("id")
+	if idstr != "" {
+		id, err := strconv.Atoi(idstr)
+		if err != nil {
+			entry.WithError(err).Errorf("invalid param %s", idstr)
+			return c.String(http.StatusInternalServerError, err.Error())
+		}
+		cond = bson.M{"_id": id}
+	}
+
+	now := time.Now().Unix()
+	entry.Infof("reset start time of stable statistics to %d", now)
+	collection := tracker.dbCli.Database(MinerTrackerDB).Collection(NodeTab)
+	_, err := collection.UpdateMany(context.Background(), cond, bson.M{"$set": bson.M{"stableStat.startTime": now, "stableStat.counter": 0}})
+	if err != nil {
+		entry.WithError(err).Errorf("reset start time of stable statistics to %d", now)
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	return c.String(http.StatusOK, "success")
 }
 
 //FilterMiners find miners by condition

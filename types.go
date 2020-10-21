@@ -84,6 +84,15 @@ type Node struct {
 	Other bson.A `bson:"other" json:"other"`
 	//ManualWeight
 	ManualWeight int32 `bson:"manualWeight" json:"manualWeight"`
+	//StableStat
+	StableStat *StableStatistics `bson:"stableStat" json:"stableStat"`
+}
+
+//StableStatistics struct
+type StableStatistics struct {
+	StartTime int64   `bson:"startTime" json:"startTime"`
+	Counter   int64   `bson:"counter" json:"counter"`
+	Ratio     float32 `bson:"ratio" json:"ratio"`
 }
 
 //NewNode create a node struct
