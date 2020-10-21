@@ -126,14 +126,25 @@ func syncNode(cli *mongo.Client, node *Node, mqcli auramq.Client, topic string) 
 	if node.Uspaces == nil {
 		node.Uspaces = make(map[string]int64)
 	}
-	_, err := collection.InsertOne(context.Background(), bson.M{"_id": node.ID, "nodeid": node.NodeID, "pubkey": node.PubKey, "owner": node.Owner, "profitAcc": node.ProfitAcc, "poolID": node.PoolID, "poolOwner": node.PoolOwner, "quota": node.Quota, "addrs": node.Addrs, "cpu": node.CPU, "memory": node.Memory, "bandwidth": node.Bandwidth, "maxDataSpace": node.MaxDataSpace, "assignedSpace": node.AssignedSpace, "productiveSpace": node.ProductiveSpace, "usedSpace": node.UsedSpace, "uspaces": node.Uspaces, "weight": node.Weight, "valid": node.Valid, "relay": node.Relay, "status": node.Status, "timestamp": node.Timestamp, "version": node.Version, "rebuilding": node.Rebuilding, "realSpace": node.RealSpace, "tx": node.Tx, "rx": node.Rx, "other": node.Other, "manualWeight": node.ManualWeight})
+	_, err := collection.InsertOne(context.Background(), bson.M{"_id": node.ID, "nodeid": node.NodeID, "pubkey": node.PubKey, "owner": node.Owner, "profitAcc": node.ProfitAcc, "poolID": node.PoolID, "poolOwner": node.PoolOwner, "quota": node.Quota, "addrs": node.Addrs, "cpu": node.CPU, "memory": node.Memory, "bandwidth": node.Bandwidth, "maxDataSpace": node.MaxDataSpace, "assignedSpace": node.AssignedSpace, "productiveSpace": node.ProductiveSpace, "usedSpace": node.UsedSpace, "uspaces": node.Uspaces, "weight": node.Weight, "valid": node.Valid, "relay": node.Relay, "status": node.Status, "timestamp": node.Timestamp, "version": node.Version, "rebuilding": node.Rebuilding, "realSpace": node.RealSpace, "tx": node.Tx, "rx": node.Rx, "other": node.Other, "manualWeight": node.ManualWeight, "stableStat": &StableStatistics{StartTime: time.Now().Unix(), Counter: 0, Ratio: 1}})
 	if err != nil {
 		errstr := err.Error()
 		if !strings.ContainsAny(errstr, "duplicate key error") {
 			entry.WithError(err).Warnf("inserting miner %d to database", node.ID)
 			return err
 		}
-		cond := bson.M{"nodeid": node.NodeID, "pubkey": node.PubKey, "owner": node.Owner, "profitAcc": node.ProfitAcc, "poolID": node.PoolID, "poolOwner": node.PoolOwner, "quota": node.Quota, "addrs": node.Addrs, "cpu": node.CPU, "memory": node.Memory, "bandwidth": node.Bandwidth, "maxDataSpace": node.MaxDataSpace, "assignedSpace": node.AssignedSpace, "productiveSpace": node.ProductiveSpace, "usedSpace": node.UsedSpace, "weight": node.Weight, "valid": node.Valid, "relay": node.Relay, "status": node.Status, "timestamp": node.Timestamp, "version": node.Version, "rebuilding": node.Rebuilding, "realSpace": node.RealSpace, "tx": node.Tx, "rx": node.Rx, "other": node.Other, "manualWeight": node.ManualWeight}
+		oldNode := new(Node)
+		err := collection.FindOne(context.Background(), bson.M{"_id": node.ID}).Decode(oldNode)
+		if err != nil {
+			entry.WithError(err).Warnf("fetching miner %d", node.ID)
+			return err
+		}
+		newCounter := oldNode.StableStat.Counter + 1
+		newRatio := float32(newCounter*60) / float32(time.Now().Unix()-oldNode.StableStat.StartTime)
+		if newRatio > 1 {
+			newRatio = 1
+		}
+		cond := bson.M{"nodeid": node.NodeID, "pubkey": node.PubKey, "owner": node.Owner, "profitAcc": node.ProfitAcc, "poolID": node.PoolID, "poolOwner": node.PoolOwner, "quota": node.Quota, "addrs": node.Addrs, "cpu": node.CPU, "memory": node.Memory, "bandwidth": node.Bandwidth, "maxDataSpace": node.MaxDataSpace, "assignedSpace": node.AssignedSpace, "productiveSpace": node.ProductiveSpace, "usedSpace": node.UsedSpace, "weight": node.Weight, "valid": node.Valid, "relay": node.Relay, "status": node.Status, "timestamp": node.Timestamp, "version": node.Version, "rebuilding": node.Rebuilding, "realSpace": node.RealSpace, "tx": node.Tx, "rx": node.Rx, "other": node.Other, "manualWeight": node.ManualWeight, "stableStat": &StableStatistics{StartTime: oldNode.StableStat.StartTime, Counter: newCounter, Ratio: newRatio}}
 		for k, v := range node.Uspaces {
 			cond[fmt.Sprintf("uspaces.%s", k)] = v
 		}
