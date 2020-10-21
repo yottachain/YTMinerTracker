@@ -139,6 +139,9 @@ func syncNode(cli *mongo.Client, node *Node, mqcli auramq.Client, topic string) 
 			entry.WithError(err).Warnf("fetching miner %d", node.ID)
 			return err
 		}
+		if oldNode.StableStat == nil {
+			oldNode.StableStat = &StableStatistics{StartTime: time.Now().Unix(), Counter: 0, Ratio: 1}
+		}
 		newCounter := oldNode.StableStat.Counter + 1
 		newRatio := float32(newCounter*60) / float32(time.Now().Unix()-oldNode.StableStat.StartTime)
 		if newRatio > 1 {
