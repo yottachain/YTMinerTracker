@@ -27,6 +27,16 @@ auramq:
     account: "yottanalysis"
     private-key: "5JdrCwfnPcqFH8osGqSy52WbcSB93wc3BLWXnSDdJZ3ffyie4HT"
     client-id: "yottaminertracker"
+miner-stat:
+  all-sync-urls:
+  - "http://127.0.0.1:8091"
+  - "http://127.0.0.1:8092"
+  - "http://127.0.0.1:8093"
+  - "http://127.0.0.1:8094"
+  - "http://127.0.0.1:8095"
+  batch-size: 100
+  wait-time: 10
+  skip-time: 180
 logger:
   output: "file"
   file-path: "./tracker.log"

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -30,10 +31,11 @@ var rootCmd = &cobra.Command{
 			panic(fmt.Sprintf("unable to decode into config struct, %v\n", err))
 		}
 		initLog(config)
-		tracker, err := yttracker.New(config.MongoDBURL, config.EOSURL, config.AuraMQ, config.Misc)
+		tracker, err := yttracker.New(config.MongoDBURL, config.EOSURL, config.AuraMQ, config.MinerStat, config.Misc)
 		if err != nil {
 			panic(fmt.Sprintf("fatal error when starting service: %s\n", err))
 		}
+		tracker.TrackingStat(context.Background())
 		tracker.Start(config.HTTPBindAddr)
 	},
 }
@@ -174,6 +176,15 @@ var (
 	//DefaultAuramqClientClientID default value of client ID for identifying MQ client
 	DefaultAuramqClientClientID = "yottaminertracker"
 
+	//DefaultMinerStatAllSyncURLs default value of MinerStatAllSyncURLs
+	DefaultMinerStatAllSyncURLs = []string{}
+	//DefaultMinerStatBatchSize default value of MinerStatBatchSize
+	DefaultMinerStatBatchSize = 100
+	//DefaultMinerStatWaitTime default value of MinerStatWaitTime
+	DefaultMinerStatWaitTime = 10
+	//DefaultMinerStatSkipTime default value of MinerStatSkipTime
+	DefaultMinerStatSkipTime = 180
+
 	//DefaultLoggerOutput default value of LoggerOutput
 	DefaultLoggerOutput string = "stdout"
 	//DefaultLoggerFilePath default value of LoggerFilePath
@@ -234,6 +245,16 @@ func initFlag() {
 	viper.BindPFlag(yttracker.AuramqClientPrivateKeyField, rootCmd.PersistentFlags().Lookup(yttracker.AuramqClientPrivateKeyField))
 	rootCmd.PersistentFlags().String(yttracker.AuramqClientClientIDField, DefaultAuramqClientClientID, "client ID for identifying MQ client")
 	viper.BindPFlag(yttracker.AuramqClientClientIDField, rootCmd.PersistentFlags().Lookup(yttracker.AuramqClientClientIDField))
+	//MinerStat config
+	//compensation config
+	rootCmd.PersistentFlags().StringSlice(yttracker.MinerStatAllSyncURLsField, DefaultMinerStatAllSyncURLs, "all URLs of sync services, in the form of --miner-stat.all-sync-urls \"URL1,URL2,URL3\"")
+	viper.BindPFlag(yttracker.MinerStatAllSyncURLsField, rootCmd.PersistentFlags().Lookup(yttracker.MinerStatAllSyncURLsField))
+	rootCmd.PersistentFlags().Int(yttracker.MinerStatBatchSizeField, DefaultMinerStatBatchSize, "batch size when fetching miner logs")
+	viper.BindPFlag(yttracker.MinerStatBatchSizeField, rootCmd.PersistentFlags().Lookup(yttracker.MinerStatBatchSizeField))
+	rootCmd.PersistentFlags().Int(yttracker.MinerStatWaitTimeField, DefaultMinerStatWaitTime, "wait time when no new miner logs can be fetched")
+	viper.BindPFlag(yttracker.MinerStatWaitTimeField, rootCmd.PersistentFlags().Lookup(yttracker.MinerStatWaitTimeField))
+	rootCmd.PersistentFlags().Int(yttracker.MinerStatSkipTimeField, DefaultMinerStatSkipTime, "ensure not to fetching miner logs till the end")
+	viper.BindPFlag(yttracker.MinerStatSkipTimeField, rootCmd.PersistentFlags().Lookup(yttracker.MinerStatSkipTimeField))
 	//logger config
 	rootCmd.PersistentFlags().String(yttracker.LoggerOutputField, DefaultLoggerOutput, "Output type of logger(stdout or file)")
 	viper.BindPFlag(yttracker.LoggerOutputField, rootCmd.PersistentFlags().Lookup(yttracker.LoggerOutputField))

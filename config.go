@@ -30,6 +30,12 @@ const (
 	AuramqClientPrivateKeyField           = "auramq.client.private-key"
 	AuramqClientClientIDField             = "auramq.client.client-id"
 
+	//MinerStat config
+	MinerStatAllSyncURLsField = "miner-stat.all-sync-urls"
+	MinerStatBatchSizeField   = "miner-stat.batch-size"
+	MinerStatWaitTimeField    = "miner-stat.wait-time"
+	MinerStatSkipTimeField    = "miner-stat.skip-time"
+
 	//Log config
 	LoggerOutputField       = "logger.output"
 	LoggerFilePathField     = "logger.file-path"
@@ -43,12 +49,13 @@ const (
 
 //Config system configuration
 type Config struct {
-	HTTPBindAddr string        `mapstructure:"http-bind-addr"`
-	EOSURL       string        `mapstructure:"eos-url"`
-	MongoDBURL   string        `mapstructure:"mongodb-url"`
-	AuraMQ       *AuraMQConfig `mapstructure:"auramq"`
-	Logger       *LogConfig    `mapstructure:"logger"`
-	Misc         *MiscConfig   `mapstructure:"misc"`
+	HTTPBindAddr string           `mapstructure:"http-bind-addr"`
+	EOSURL       string           `mapstructure:"eos-url"`
+	MongoDBURL   string           `mapstructure:"mongodb-url"`
+	AuraMQ       *AuraMQConfig    `mapstructure:"auramq"`
+	MinerStat    *MinerStatConfig `mapstructure:"miner-stat"`
+	Logger       *LogConfig       `mapstructure:"logger"`
+	Misc         *MiscConfig      `mapstructure:"misc"`
 }
 
 //AuraMQConfig auramq configuration
@@ -81,6 +88,14 @@ type ClientConfig struct {
 	Account              string   `mapstructure:"account"`
 	PrivateKey           string   `mapstructure:"private-key"`
 	ClientID             string   `mapstructure:"client-id"`
+}
+
+//CompensationConfig compensation configuration
+type MinerStatConfig struct {
+	AllSyncURLs []string `mapstructure:"all-sync-urls"`
+	BatchSize   int      `mapstructure:"batch-size"`
+	WaitTime    int      `mapstructure:"wait-time"`
+	SkipTime    int      `mapstructure:"skip-time"`
 }
 
 //LogConfig system log configuration

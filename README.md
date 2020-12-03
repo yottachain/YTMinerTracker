@@ -61,6 +61,21 @@ auramq:
     private-key: "5JdrCwfnPcqFH8osGqSy52WbcSB93wc3BLWXnSDdJZ3ffyie4HT"
     #客户端标识ID，默认值为yottaminertracker
     client-id: "yottaminertracker"
+#矿机日志跟踪
+miner-stat:
+  #要连接的全部同步地址，默认值为空
+  all-sync-urls:
+  - "http://127.0.0.1:8091"
+  - "http://127.0.0.1:8092"
+  - "http://127.0.0.1:8093"
+  - "http://127.0.0.1:8094"
+  - "http://127.0.0.1:8095"
+  #每次取多少条记录
+  batch-size: 100
+  #没有记录可取时的等待时间（秒）
+  wait-time: 10
+  #轮询到比当前时间提前多少秒时停止轮询
+  skip-time: 180
 #日志配置
 logger:
   #日志输出类型：stdout为输出到标准输出流，file为输出到文件，默认为stdout，此时只有level属性起作用，其他属性会被忽略

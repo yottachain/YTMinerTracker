@@ -86,6 +86,8 @@ type Node struct {
 	ManualWeight int32 `bson:"manualWeight" json:"manualWeight"`
 	//StableStat
 	StableStat *StableStatistics `bson:"stableStat" json:"stableStat"`
+	//regtime
+	RegTime int64 `bson:"regtime" json:"regtime"`
 }
 
 //StableStatistics struct
@@ -102,9 +104,10 @@ func NewNode(id int32, nodeid string, pubkey string, owner string, profitAcc str
 
 //relative DB and collection name
 var (
-	MinerTrackerDB = "minertracker"
-	NodeTab        = "Node"
-	AuthTab        = "Auth"
+	MinerTrackerDB   = "minertracker"
+	NodeTab          = "Node"
+	AuthTab          = "Auth"
+	TrackProgressTab = "TrackProgress"
 )
 
 // Convert convert Node strcut to NodeMsg

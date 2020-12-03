@@ -23,13 +23,15 @@ import (
 
 //MinerTracker miner tracker
 type MinerTracker struct {
-	server *echo.Echo
-	dbCli  *mongo.Client
-	params *MiscConfig
+	server    *echo.Echo
+	dbCli     *mongo.Client
+	httpCli   *http.Client
+	minerStat *MinerStatConfig
+	params    *MiscConfig
 }
 
 //New create a new miner tracker instance
-func New(mongoDBURL, eosURL string, mqconf *AuraMQConfig, miscconf *MiscConfig) (*MinerTracker, error) {
+func New(mongoDBURL, eosURL string, mqconf *AuraMQConfig, msConfig *MinerStatConfig, miscconf *MiscConfig) (*MinerTracker, error) {
 	entry := log.WithFields(log.Fields{Function: "New"})
 	dbClient, err := mongo.Connect(context.Background(), options.Client().ApplyURI(mongoDBURL))
 	if err != nil {
@@ -46,7 +48,7 @@ func New(mongoDBURL, eosURL string, mqconf *AuraMQConfig, miscconf *MiscConfig) 
 	}
 	entry.Info("sync service started")
 	server := echo.New()
-	return &MinerTracker{server: server, dbCli: dbClient, params: miscconf}, nil
+	return &MinerTracker{server: server, dbCli: dbClient, httpCli: &http.Client{}, minerStat: msConfig, params: miscconf}, nil
 }
 
 //Start HTTP server
