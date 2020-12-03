@@ -246,7 +246,6 @@ func initFlag() {
 	rootCmd.PersistentFlags().String(yttracker.AuramqClientClientIDField, DefaultAuramqClientClientID, "client ID for identifying MQ client")
 	viper.BindPFlag(yttracker.AuramqClientClientIDField, rootCmd.PersistentFlags().Lookup(yttracker.AuramqClientClientIDField))
 	//MinerStat config
-	//compensation config
 	rootCmd.PersistentFlags().StringSlice(yttracker.MinerStatAllSyncURLsField, DefaultMinerStatAllSyncURLs, "all URLs of sync services, in the form of --miner-stat.all-sync-urls \"URL1,URL2,URL3\"")
 	viper.BindPFlag(yttracker.MinerStatAllSyncURLsField, rootCmd.PersistentFlags().Lookup(yttracker.MinerStatAllSyncURLsField))
 	rootCmd.PersistentFlags().Int(yttracker.MinerStatBatchSizeField, DefaultMinerStatBatchSize, "batch size when fetching miner logs")

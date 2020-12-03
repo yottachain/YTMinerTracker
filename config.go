@@ -90,7 +90,7 @@ type ClientConfig struct {
 	ClientID             string   `mapstructure:"client-id"`
 }
 
-//CompensationConfig compensation configuration
+//MinerStatConfig miner log sync configuration
 type MinerStatConfig struct {
 	AllSyncURLs []string `mapstructure:"all-sync-urls"`
 	BatchSize   int      `mapstructure:"batch-size"`
