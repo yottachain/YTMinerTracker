@@ -33,6 +33,7 @@ message NodeMsg {
 	string ext = 27;               //other
 	map<string, int64> uspaces = 28; //used spaces on each SN
 	int32 manualWeight = 29;       //control weight manually
+	bool unreadable = 30;          //whether node is readable
 }
 
 message SignMessage {
