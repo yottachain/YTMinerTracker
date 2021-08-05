@@ -86,6 +86,14 @@ type Node struct {
 	ManualWeight int32 `bson:"manualWeight" json:"manualWeight"`
 	//Unreadable
 	Unreadable bool `bson:"unreadable" json:"unreadable"`
+	//HashID
+	HashID string `bson:"hashID"`
+	//BlCount
+	BlCount int32 `bson:"blCount"`
+	//Filing
+	Filing bool `bson:"filing"`
+	//AllocatedSpace
+	AllocatedSpace int64 `bson:"allocatedSpace"`
 	//StableStat
 	StableStat *StableStatistics `bson:"stableStat" json:"stableStat"`
 	//regtime
@@ -100,8 +108,8 @@ type StableStatistics struct {
 }
 
 //NewNode create a node struct
-func NewNode(id int32, nodeid string, pubkey string, owner string, profitAcc string, poolID string, poolOwner string, quota int64, addrs []string, cpu int32, memory int32, bandwidth int32, maxDataSpace int64, assignedSpace int64, productiveSpace int64, usedSpace int64, weight float64, valid int32, relay int32, status int32, timestamp int64, version int32, rebuilding int32, realSpace int64, tx int64, rx int64, other bson.A, manualWeight int32, unreadable bool) *Node {
-	return &Node{ID: id, NodeID: nodeid, PubKey: pubkey, Owner: owner, ProfitAcc: profitAcc, PoolID: poolID, PoolOwner: poolOwner, Quota: quota, Addrs: addrs, CPU: cpu, Memory: memory, Bandwidth: bandwidth, MaxDataSpace: maxDataSpace, AssignedSpace: assignedSpace, ProductiveSpace: productiveSpace, UsedSpace: usedSpace, Weight: weight, Valid: valid, Relay: relay, Status: status, Timestamp: timestamp, Version: version, Rebuilding: rebuilding, RealSpace: realSpace, Tx: tx, Rx: rx, Other: other, ManualWeight: manualWeight, Unreadable: unreadable}
+func NewNode(id int32, nodeid string, pubkey string, owner string, profitAcc string, poolID string, poolOwner string, quota int64, addrs []string, cpu int32, memory int32, bandwidth int32, maxDataSpace int64, assignedSpace int64, productiveSpace int64, usedSpace int64, weight float64, valid int32, relay int32, status int32, timestamp int64, version int32, rebuilding int32, realSpace int64, tx int64, rx int64, other bson.A, manualWeight int32, unreadable bool, hashID string, blCount int32, filing bool, allocatedSpace int64) *Node {
+	return &Node{ID: id, NodeID: nodeid, PubKey: pubkey, Owner: owner, ProfitAcc: profitAcc, PoolID: poolID, PoolOwner: poolOwner, Quota: quota, Addrs: addrs, CPU: cpu, Memory: memory, Bandwidth: bandwidth, MaxDataSpace: maxDataSpace, AssignedSpace: assignedSpace, ProductiveSpace: productiveSpace, UsedSpace: usedSpace, Weight: weight, Valid: valid, Relay: relay, Status: status, Timestamp: timestamp, Version: version, Rebuilding: rebuilding, RealSpace: realSpace, Tx: tx, Rx: rx, Other: other, ManualWeight: manualWeight, Unreadable: unreadable, HashID: hashID, BlCount: blCount, Filing: filing, AllocatedSpace: allocatedSpace}
 }
 
 //relative DB and collection name
@@ -153,6 +161,10 @@ func (node *Node) Convert() (*pb.NodeMsg, error) {
 		Ext:             ext,
 		ManualWeight:    node.ManualWeight,
 		Unreadable:      node.Unreadable,
+		Hash:            node.HashID,
+		BlCount:         node.BlCount,
+		Filing:          node.Filing,
+		AllocatedSpace:  node.AllocatedSpace,
 	}, nil
 }
 
@@ -197,5 +209,9 @@ func (node *Node) Fillby(msg *pb.NodeMsg) error {
 	node.Other = other
 	node.ManualWeight = msg.ManualWeight
 	node.Unreadable = msg.Unreadable
+	node.HashID = msg.Hash
+	node.BlCount = msg.BlCount
+	node.Filing = msg.Filing
+	node.AllocatedSpace = msg.AllocatedSpace
 	return nil
 }

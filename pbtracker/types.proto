@@ -34,6 +34,10 @@ message NodeMsg {
 	map<string, int64> uspaces = 28; //used spaces on each SN
 	int32 manualWeight = 29;       //control weight manually
 	bool unreadable = 30;          //whether node is readable
+	string hash = 31;              //hash identity
+	int32 blCount = 32;            //count of inserted into black list
+	bool filing = 33;              //filing miner will not be punished
+	int64 allocatedSpace = 34;      //allocate space of miner
 }
 
 message SignMessage {
