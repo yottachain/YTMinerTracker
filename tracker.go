@@ -136,9 +136,20 @@ func (tracker *MinerTracker) ResetHandler(c echo.Context) error {
 }
 
 //FilterMiners find miners by condition
-func (tracker *MinerTracker) FilterMiners(q bson.M) ([]*Node, error) {
+func (tracker *MinerTracker) FilterMiners(q bson.M, sortparam string, ascparam bool, limitparam int64) ([]*Node, error) {
 	collection := tracker.dbCli.Database(MinerTrackerDB).Collection(NodeTab)
-	cur, err := collection.Find(context.Background(), q)
+	opt := new(options.FindOptions)
+	asc := 1
+	if !ascparam {
+		asc = -1
+	}
+	if sortparam != "" {
+		opt.Sort = bson.M{sortparam: asc}
+	}
+	if limitparam != 0 {
+		opt.Limit = &limitparam
+	}
+	cur, err := collection.Find(context.Background(), q, opt)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +193,26 @@ func (tracker *MinerTracker) QueryHandler(c echo.Context) error {
 			return c.String(http.StatusInternalServerError, err.Error())
 		}
 	}
-	nodes, err := tracker.FilterMiners(q)
+	sortstr := c.QueryParam("sort")
+	ascstr := c.QueryParam("asc")
+	asc := true
+	if ascstr != "" {
+		asc, err = strconv.ParseBool(ascstr)
+		if err != nil {
+			entry.WithError(err).Errorf("invalid asc param %s", ascstr)
+			return c.String(http.StatusInternalServerError, err.Error())
+		}
+	}
+	limitstr := c.QueryParam("limit")
+	limit := 0
+	if limitstr != "" {
+		limit, err = strconv.Atoi(limitstr)
+		if err != nil {
+			entry.WithError(err).Errorf("invalid limit param %s", limitstr)
+			return c.String(http.StatusInternalServerError, err.Error())
+		}
+	}
+	nodes, err := tracker.FilterMiners(q, sortstr, asc, int64(limit))
 	if err != nil {
 		entry.WithError(err).Errorf("filter nodes: %+v", q)
 		return c.String(http.StatusInternalServerError, err.Error())

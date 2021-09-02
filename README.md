@@ -126,9 +126,9 @@ $ curl -XPOST http://127.0.0.1:8080/query
 ```
 $ curl -XPOST -d'{"_id": 17}' http://127.0.0.1:8080/query
 ```
-查询上报时间大于某时间的矿机：
+查询上报时间大于某时间的矿机，以_id字段降序排列取前10个：
 ```
-$ curl -XPOST -d'{"timestamp": {"$gt": 1593598279}}' http://127.0.0.1:8080/query
+$ curl -XPOST -d'{"timestamp": {"$gt": 1593598279}}' http://127.0.0.1:8080/query?sort=_id&asc=false&limit=10
 ```
 POST请求体为查询条件（JSON格式的mongodb查询字符串），查询成功后返回矿机信息的JSON数组
 
