@@ -4,11 +4,13 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aurawing/eos-go"
@@ -23,11 +25,13 @@ import (
 
 //MinerTracker miner tracker
 type MinerTracker struct {
-	server    *echo.Echo
-	dbCli     *mongo.Client
-	httpCli   *http.Client
-	minerStat *MinerStatConfig
-	params    *MiscConfig
+	server        *echo.Echo
+	dbCli         *mongo.Client
+	httpCli       *http.Client
+	minerStat     *MinerStatConfig
+	params        *MiscConfig
+	ReadableNodes []*ReadableNode
+	sync.RWMutex
 }
 
 //New create a new miner tracker instance
@@ -48,7 +52,17 @@ func New(mongoDBURL, eosURL string, mqconf *AuraMQConfig, msConfig *MinerStatCon
 	}
 	entry.Info("sync service started")
 	server := echo.New()
-	return &MinerTracker{server: server, dbCli: dbClient, httpCli: &http.Client{}, minerStat: msConfig, params: miscconf}, nil
+	tracker := &MinerTracker{server: server, dbCli: dbClient, httpCli: &http.Client{}, minerStat: msConfig, params: miscconf}
+	go func() {
+		for {
+			err := tracker.refreshReadableNodes()
+			if err != nil {
+				entry.WithError(err).Error("finding readable nodes failed")
+			}
+			time.Sleep(time.Duration(300) * time.Second)
+		}
+	}()
+	return tracker, nil
 }
 
 //Start HTTP server
@@ -62,12 +76,62 @@ func (tracker *MinerTracker) Start(bindAddr string) error {
 	tracker.server.POST("/query", tracker.QueryHandler)
 	tracker.server.POST("/stablestat/reset", tracker.ResetHandler)
 	tracker.server.POST("/stablestat/refresh", tracker.RefreshHandler)
+	tracker.server.GET("/readable_nodes", tracker.ReadableNodesHandler)
 	tracker.server.Server.Addr = bindAddr
 	err := graceful.ListenAndServe(tracker.server.Server, 5*time.Second)
 	if err != nil {
 		entry.WithError(err).Error("start tracker service failed")
 	}
 	return err
+}
+
+func (tracker *MinerTracker) refreshReadableNodes() error {
+	entry := log.WithFields(log.Fields{Function: "refreshReadableNodes"})
+	nodes := make([]*ReadableNode, 0)
+	collection := tracker.dbCli.Database(MinerTrackerDB).Collection(NodeTab)
+	cur, err := collection.Find(context.Background(), bson.M{"valid": 1, "status": 1, "assignedSpace": bson.M{"$gt": 0}, "quota": bson.M{"$gt": 0}, "timestamp": bson.M{"$gt": time.Now().Unix() - int64(300)}, "unreadable": false})
+	if err != nil {
+		entry.WithError(err).Error("finding readable nodes list failed")
+		return err
+	}
+	defer cur.Close(context.Background())
+	for cur.Next(context.Background()) {
+		result := new(Node)
+		err := cur.Decode(result)
+		if err != nil {
+			entry.WithError(err).Error("decoding readable nodes")
+			return err
+		}
+		rnode := new(ReadableNode)
+		rnode.ID = fmt.Sprintf("%d", result.ID)
+		rnode.NodeID = result.NodeID
+		rnode.IP = result.Addrs
+		rnode.Weight = fmt.Sprintf("%d", int32(result.Weight))
+		if len(result.Other) > 0 {
+			params, ok := result.Other[0].(bson.D)
+			if ok {
+				txTokenFillRate, ok := params.Map()["TXTokenFillRate"]
+				if ok && txTokenFillRate != nil {
+					txTFR, ok := txTokenFillRate.(int32)
+					if ok {
+						rnode.TXTokenFillRate = txTFR
+					}
+				}
+				rxTokenFillRate, ok := params.Map()["RXTokenFillRate"]
+				if ok && rxTokenFillRate != nil {
+					rxTFR, ok := rxTokenFillRate.(int32)
+					if ok {
+						rnode.RXTokenFillRate = rxTFR
+					}
+				}
+			}
+		}
+		nodes = append(nodes, rnode)
+	}
+	tracker.Lock()
+	defer tracker.Unlock()
+	tracker.ReadableNodes = nodes
+	return nil
 }
 
 //RefreshHandler refresh ratio of stable statictics
@@ -222,5 +286,18 @@ func (tracker *MinerTracker) QueryHandler(c echo.Context) error {
 		entry.WithError(err).Error("marshaling miner information to json")
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
+	return c.JSONBlob(http.StatusOK, b)
+}
+
+//ReadableNodesHandler find all readable nodes
+func (tracker *MinerTracker) ReadableNodesHandler(c echo.Context) error {
+	entry := log.WithFields(log.Fields{Function: "ReadableNodesHandler"})
+	tracker.RLock()
+	b, err := json.Marshal(tracker.ReadableNodes)
+	if err != nil {
+		entry.WithError(err).Error("marshaling miner information to json")
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	tracker.RUnlock()
 	return c.JSONBlob(http.StatusOK, b)
 }

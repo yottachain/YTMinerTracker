@@ -100,6 +100,22 @@ type Node struct {
 	RegTime int64 `bson:"regtime" json:"regtime"`
 }
 
+//ReadableNode instance
+type ReadableNode struct {
+	//data node index
+	ID string `json:"id"`
+	//listening addresses of data node
+	IP []string `json:"ip"`
+	//data node ID, generated from PubKey
+	NodeID string `json:"nodeid"`
+	//weight for allocate data node
+	Weight string `json:"weight"`
+	//TXTokenFillRate
+	TXTokenFillRate int32 `json:"TXTokenFillRate"`
+	//RXTokenFillRate
+	RXTokenFillRate int32 `json:"RXTokenFillRate"`
+}
+
 //StableStatistics struct
 type StableStatistics struct {
 	StartTime int64   `bson:"startTime" json:"startTime"`
