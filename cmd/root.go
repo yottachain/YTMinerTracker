@@ -31,7 +31,14 @@ var rootCmd = &cobra.Command{
 			panic(fmt.Sprintf("unable to decode into config struct, %v\n", err))
 		}
 		initLog(config)
-		fmt.Printf("Config file: %+v\n", config)
+		fmt.Printf("HTTP Bind Addr: %s\n", config.HTTPBindAddr)
+		fmt.Printf("MongoDB URL: %s\n", config.MongoDBURL)
+		fmt.Printf("EOS URL: %s\n", config.EOSURL)
+		fmt.Printf("AuraMQ Server: %+v\n", config.AuraMQ.ServerConfig)
+		fmt.Printf("AuraMQ Client: %+v\n", config.AuraMQ.ClientConfig)
+		fmt.Printf("Logger: %+v\n", config.Logger)
+		fmt.Printf("MinerStat: %+v\n", config.MinerStat)
+		fmt.Printf("Misc: %+v\n", config.Misc)
 		tracker, err := yttracker.New(config.MongoDBURL, config.EOSURL, config.AuraMQ, config.MinerStat, config.Misc)
 		if err != nil {
 			panic(fmt.Sprintf("fatal error when starting service: %s\n", err))
