@@ -55,7 +55,7 @@ func StartSync(api *eos.API, mongoCli *mongo.Client, serverConf *ServerConfig, c
 	data := []byte(getRandomString(8))
 	signature, err := ytcrypto.Sign(clientConf.PrivateKey, data)
 	if err != nil {
-		entry.WithError(err).Error("generating signature")
+		entry.WithError(err).Errorf("generating signature: %s %s", clientConf.PrivateKey, data)
 		return nil, err
 	}
 	sigMsg := &pb.SignMessage{AccountName: clientConf.Account, Data: data, Signature: signature}
