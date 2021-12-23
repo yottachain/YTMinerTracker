@@ -31,6 +31,7 @@ var rootCmd = &cobra.Command{
 			panic(fmt.Sprintf("unable to decode into config struct, %v\n", err))
 		}
 		initLog(config)
+		fmt.Printf("Config file: %+v\n", config)
 		tracker, err := yttracker.New(config.MongoDBURL, config.EOSURL, config.AuraMQ, config.MinerStat, config.Misc)
 		if err != nil {
 			panic(fmt.Sprintf("fatal error when starting service: %s\n", err))
