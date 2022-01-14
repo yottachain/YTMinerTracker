@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -43,6 +44,43 @@ type TrackProgress struct {
 	ID        int32 `bson:"_id"`
 	Start     int64 `bson:"start"`
 	Timestamp int64 `bson:"timestamp"`
+}
+
+//GetMiners find miner infos
+func GetMiners(httpCli *http.Client, url string, from, count, snCount, snIndex int64) ([]*Node, error) {
+	entry := log.WithFields(log.Fields{Function: "GetMiners"})
+	fullURL := fmt.Sprintf("%s/sync/getMiners?start=%d&count=%d&sncount=%d&snindex=%d", url, from, count, snCount, snIndex)
+	entry.Debugf("fetching miner infos by URL: %s", fullURL)
+	request, err := http.NewRequest("GET", fullURL, nil)
+	if err != nil {
+		entry.WithError(err).Errorf("create request failed: %s", fullURL)
+		return nil, err
+	}
+	request.Header.Add("Accept-Encoding", "gzip")
+	resp, err := httpCli.Do(request)
+	if err != nil {
+		entry.WithError(err).Errorf("get miner infos failed: %s", fullURL)
+		return nil, err
+	}
+	defer resp.Body.Close()
+	reader := io.Reader(resp.Body)
+	if strings.Contains(resp.Header.Get("Content-Encoding"), "gzip") {
+		gbuf, err := gzip.NewReader(reader)
+		if err != nil {
+			entry.WithError(err).Errorf("decompress response body: %s", fullURL)
+			return nil, err
+		}
+		reader = io.Reader(gbuf)
+		defer gbuf.Close()
+	}
+	response := make([]*Node, 0)
+	err = json.NewDecoder(reader).Decode(&response)
+	if err != nil {
+		entry.WithError(err).Errorf("decode miner infos failed: %s", fullURL)
+		return nil, err
+	}
+	entry.Debugf("fetched %d miner infos", len(response))
+	return response, nil
 }
 
 //GetMinerLogs find miner logs
@@ -166,5 +204,71 @@ func (tracker *MinerTracker) TrackingStat(ctx context.Context) {
 				}
 			}
 		}()
+	}
+}
+
+//TrackingMiners tracking miner infos
+func (tracker *MinerTracker) TrackingMiners(ctx context.Context) {
+	entry := log.WithFields(log.Fields{Function: "TrackingMiners"})
+	urls := tracker.minerStat.AllSyncURLs
+	snCount := len(urls)
+	collectionMiner := tracker.dbCli.Database(MinerTrackerDB).Collection(NodeTab)
+	for {
+		var wg sync.WaitGroup
+		wg.Add(snCount)
+		for i := 0; i < snCount; i++ {
+			snID := int64(i)
+			go func() {
+				entry.Infof("starting tracking SN%d", snID)
+				from := int64(0)
+				for {
+					miners, err := GetMiners(tracker.httpCli, tracker.minerStat.AllSyncURLs[snID], from, int64(tracker.minerStat.BatchSize), int64(snCount), snID)
+					if err != nil {
+						time.Sleep(time.Duration(tracker.minerStat.WaitTime) * time.Second)
+						continue
+					}
+					if len(miners) == 0 {
+						wg.Done()
+						break
+					}
+					for _, item := range miners {
+						_, err := collectionMiner.InsertOne(ctx, bson.M{"_id": item.ID, "nodeid": item.NodeID, "pubkey": item.PubKey, "owner": item.Owner, "profitAcc": item.ProfitAcc, "poolID": item.PoolID, "poolOwner": item.PoolOwner, "quota": item.Quota, "addrs": item.Addrs, "cpu": item.CPU, "memory": item.Memory, "bandwidth": item.Bandwidth, "maxDataSpace": item.MaxDataSpace, "assignedSpace": item.AssignedSpace, "productiveSpace": item.ProductiveSpace, "usedSpace": item.UsedSpace, "uspaces": item.Uspaces, "weight": item.Weight, "valid": item.Valid, "relay": item.Relay, "status": item.Status, "timestamp": item.Timestamp, "version": item.Version, "rebuilding": item.Rebuilding, "realSpace": item.RealSpace, "tx": item.Tx, "rx": item.Rx, "other": item.Other, "manualWeight": item.ManualWeight, "unreadable": item.Unreadable, "hashID": item.HashID, "blCount": item.BlCount, "filing": item.Filing, "allocatedSpace": item.AllocatedSpace, "stableStat": &StableStatistics{StartTime: time.Now().Unix(), Counter: 0, Ratio: 1}})
+						if err != nil {
+							errstr := err.Error()
+							if !strings.ContainsAny(errstr, "duplicate key error") {
+								entry.WithError(err).Warnf("inserting miner %d to database", item.ID)
+								continue
+							}
+							oldNode := new(Node)
+							err := collectionMiner.FindOne(ctx, bson.M{"_id": item.ID}).Decode(oldNode)
+							if err != nil {
+								entry.WithError(err).Warnf("fetching miner %d", item.ID)
+								continue
+							}
+							if oldNode.Timestamp > item.Timestamp {
+								continue
+							}
+							if oldNode.StableStat == nil {
+								oldNode.StableStat = &StableStatistics{StartTime: time.Now().Unix(), Counter: 0, Ratio: 1}
+							}
+							cond := bson.M{"nodeid": item.NodeID, "pubkey": item.PubKey, "owner": item.Owner, "profitAcc": item.ProfitAcc, "poolID": item.PoolID, "poolOwner": item.PoolOwner, "quota": item.Quota, "addrs": item.Addrs, "cpu": item.CPU, "memory": item.Memory, "bandwidth": item.Bandwidth, "maxDataSpace": item.MaxDataSpace, "assignedSpace": item.AssignedSpace, "productiveSpace": item.ProductiveSpace, "usedSpace": item.UsedSpace, "weight": item.Weight, "valid": item.Valid, "relay": item.Relay, "status": item.Status, "timestamp": item.Timestamp, "version": item.Version, "rebuilding": item.Rebuilding, "realSpace": item.RealSpace, "tx": item.Tx, "rx": item.Rx, "manualWeight": item.ManualWeight, "unreadable": item.Unreadable, "hashID": item.HashID, "blCount": item.BlCount, "filing": item.Filing, "allocatedSpace": item.AllocatedSpace, "stableStat": oldNode.StableStat}
+							if len(item.Other) > 0 {
+								cond["other"] = item.Other
+							}
+							for k, v := range item.Uspaces {
+								cond[fmt.Sprintf("uspaces.%s", k)] = v
+							}
+							_, err = collectionMiner.UpdateOne(ctx, bson.M{"_id": item.ID}, bson.M{"$set": cond})
+							if err != nil {
+								entry.WithError(err).Warnf("updating record of miner %d", item.ID)
+							}
+						}
+					}
+					from = int64(miners[len(miners)-1].ID + 1)
+				}
+			}()
+		}
+		wg.Wait()
+		time.Sleep(time.Duration(1) * time.Hour)
 	}
 }

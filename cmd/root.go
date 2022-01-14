@@ -44,6 +44,7 @@ var rootCmd = &cobra.Command{
 			panic(fmt.Sprintf("fatal error when starting service: %s\n", err))
 		}
 		tracker.TrackingStat(context.Background())
+		go tracker.TrackingMiners(context.Background())
 		tracker.Start(config.HTTPBindAddr)
 	},
 }
