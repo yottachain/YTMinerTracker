@@ -17,13 +17,14 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	log "github.com/sirupsen/logrus"
-	"github.com/tylerb/graceful"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
-//MinerTracker miner tracker
+// MinerTracker miner tracker
 type MinerTracker struct {
 	server        *echo.Echo
 	dbCli         *mongo.Client
@@ -34,7 +35,7 @@ type MinerTracker struct {
 	sync.RWMutex
 }
 
-//New create a new miner tracker instance
+// New create a new miner tracker instance
 func New(mongoDBURL, eosURL string, mqconf *AuraMQConfig, msConfig *MinerStatConfig, miscconf *MiscConfig) (*MinerTracker, error) {
 	entry := log.WithFields(log.Fields{Function: "New"})
 	dbClient, err := mongo.Connect(context.Background(), options.Client().ApplyURI(mongoDBURL))
@@ -65,7 +66,7 @@ func New(mongoDBURL, eosURL string, mqconf *AuraMQConfig, msConfig *MinerStatCon
 	return tracker, nil
 }
 
-//Start HTTP server
+// Start HTTP server
 func (tracker *MinerTracker) Start(bindAddr string) error {
 	entry := log.WithFields(log.Fields{Function: "Start"})
 	tracker.server.Use(middleware.Logger())
@@ -77,12 +78,25 @@ func (tracker *MinerTracker) Start(bindAddr string) error {
 	tracker.server.POST("/stablestat/reset", tracker.ResetHandler)
 	tracker.server.POST("/stablestat/refresh", tracker.RefreshHandler)
 	tracker.server.GET("/readable_nodes", tracker.ReadableNodesHandler)
-	tracker.server.Server.Addr = bindAddr
-	err := graceful.ListenAndServe(tracker.server.Server, 5*time.Second)
-	if err != nil {
-		entry.WithError(err).Error("start tracker service failed")
+	//tracker.server.Server.Addr = bindAddr
+
+	h2s := &http2.Server{}
+	svr := http.Server{
+		Addr:    bindAddr,
+		Handler: h2c.NewHandler(tracker.server, h2s),
+		//ReadTimeout: 30 * time.Second, // customize http.Server timeouts
 	}
-	return err
+	if err := svr.ListenAndServe(); err != http.ErrServerClosed {
+		entry.WithError(err).Error("start sync server failed")
+		return err
+	}
+	return nil
+
+	// err := graceful.ListenAndServe(tracker.server.Server, 5*time.Second)
+	// if err != nil {
+	// 	entry.WithError(err).Error("start tracker service failed")
+	// }
+	// return err
 }
 
 func (tracker *MinerTracker) refreshReadableNodes() error {
@@ -108,23 +122,23 @@ func (tracker *MinerTracker) refreshReadableNodes() error {
 		rnode.IP = result.Addrs
 		rnode.Weight = fmt.Sprintf("%d", int32(result.Weight))
 		if len(result.Other) > 0 {
-			params, ok := result.Other[0].(bson.D)
-			if ok {
-				txTokenFillRate, ok := params.Map()["TXTokenFillRate"]
-				if ok && txTokenFillRate != nil {
-					txTFR, ok := txTokenFillRate.(int32)
-					if ok {
-						rnode.TXTokenFillRate = txTFR
-					}
-				}
-				rxTokenFillRate, ok := params.Map()["RXTokenFillRate"]
-				if ok && rxTokenFillRate != nil {
-					rxTFR, ok := rxTokenFillRate.(int32)
-					if ok {
-						rnode.RXTokenFillRate = rxTFR
-					}
+			params := result.Other[0]
+			//if ok {
+			txTokenFillRate, ok := params["TXTokenFillRate"]
+			if ok && txTokenFillRate != nil {
+				txTFR, ok := txTokenFillRate.(int32)
+				if ok {
+					rnode.TXTokenFillRate = txTFR
 				}
 			}
+			rxTokenFillRate, ok := params["RXTokenFillRate"]
+			if ok && rxTokenFillRate != nil {
+				rxTFR, ok := rxTokenFillRate.(int32)
+				if ok {
+					rnode.RXTokenFillRate = rxTFR
+				}
+			}
+			//}
 		}
 		nodes = append(nodes, rnode)
 	}
@@ -134,7 +148,7 @@ func (tracker *MinerTracker) refreshReadableNodes() error {
 	return nil
 }
 
-//RefreshHandler refresh ratio of stable statictics
+// RefreshHandler refresh ratio of stable statictics
 func (tracker *MinerTracker) RefreshHandler(c echo.Context) error {
 	entry := log.WithFields(log.Fields{Function: "RefreshHandler"})
 	cond := bson.M{}
@@ -167,14 +181,14 @@ func (tracker *MinerTracker) RefreshHandler(c echo.Context) error {
 		}
 		_, err = collection.UpdateOne(context.Background(), bson.M{"_id": node.ID}, bson.M{"$set": bson.M{"stableStat.ratio": ratio}})
 		if err != nil {
-			entry.WithError(err).Error("update ratio of miner %d", node.ID)
+			entry.WithError(err).Errorf("update ratio of miner %d", node.ID)
 			continue
 		}
 	}
 	return c.String(http.StatusOK, "success")
 }
 
-//ResetHandler reset stable statistics
+// ResetHandler reset stable statistics
 func (tracker *MinerTracker) ResetHandler(c echo.Context) error {
 	entry := log.WithFields(log.Fields{Function: "ResetHandler"})
 	cond := bson.M{}
@@ -199,7 +213,7 @@ func (tracker *MinerTracker) ResetHandler(c echo.Context) error {
 	return c.String(http.StatusOK, "success")
 }
 
-//FilterMiners find miners by condition
+// FilterMiners find miners by condition
 func (tracker *MinerTracker) FilterMiners(q bson.M, sortparam string, ascparam bool, limitparam int64) ([]*Node, error) {
 	collection := tracker.dbCli.Database(MinerTrackerDB).Collection(NodeTab)
 	opt := new(options.FindOptions)
@@ -230,7 +244,7 @@ func (tracker *MinerTracker) FilterMiners(q bson.M, sortparam string, ascparam b
 	return nodes, nil
 }
 
-//QueryHandler process miner info query
+// QueryHandler process miner info query
 func (tracker *MinerTracker) QueryHandler(c echo.Context) error {
 	entry := log.WithFields(log.Fields{Function: "QueryHandler"})
 	var reader = io.Reader(c.Request().Body)
@@ -289,7 +303,7 @@ func (tracker *MinerTracker) QueryHandler(c echo.Context) error {
 	return c.JSONBlob(http.StatusOK, b)
 }
 
-//ReadableNodesHandler find all readable nodes
+// ReadableNodesHandler find all readable nodes
 func (tracker *MinerTracker) ReadableNodesHandler(c echo.Context) error {
 	entry := log.WithFields(log.Fields{Function: "ReadableNodesHandler"})
 	tracker.RLock()

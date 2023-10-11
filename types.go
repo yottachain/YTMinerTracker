@@ -16,7 +16,7 @@ const (
 	AccountName = "account"
 )
 
-//Auth crenditial info
+// Auth crenditial info
 type Auth struct {
 	//Account name in BP
 	Account string `bson:"_id"`
@@ -81,7 +81,7 @@ type Node struct {
 	//Rx
 	Rx int64 `bson:"rx" json:"rx"`
 	//Other
-	Other bson.A `bson:"other" json:"other"`
+	Other []bson.M `bson:"other" json:"other"`
 	//ManualWeight
 	ManualWeight int32 `bson:"manualWeight" json:"manualWeight"`
 	//Unreadable
@@ -100,7 +100,7 @@ type Node struct {
 	RegTime int64 `bson:"regtime" json:"regtime"`
 }
 
-//ReadableNode instance
+// ReadableNode instance
 type ReadableNode struct {
 	//data node index
 	ID string `json:"id"`
@@ -116,19 +116,19 @@ type ReadableNode struct {
 	RXTokenFillRate int32 `json:"RXTokenFillRate"`
 }
 
-//StableStatistics struct
+// StableStatistics struct
 type StableStatistics struct {
 	StartTime int64   `bson:"startTime" json:"startTime"`
 	Counter   int64   `bson:"counter" json:"counter"`
 	Ratio     float32 `bson:"ratio" json:"ratio"`
 }
 
-//NewNode create a node struct
-func NewNode(id int32, nodeid string, pubkey string, owner string, profitAcc string, poolID string, poolOwner string, quota int64, addrs []string, cpu int32, memory int32, bandwidth int32, maxDataSpace int64, assignedSpace int64, productiveSpace int64, usedSpace int64, weight float64, valid int32, relay int32, status int32, timestamp int64, version int32, rebuilding int32, realSpace int64, tx int64, rx int64, other bson.A, manualWeight int32, unreadable bool, hashID string, blCount int32, filing bool, allocatedSpace int64) *Node {
+// NewNode create a node struct
+func NewNode(id int32, nodeid string, pubkey string, owner string, profitAcc string, poolID string, poolOwner string, quota int64, addrs []string, cpu int32, memory int32, bandwidth int32, maxDataSpace int64, assignedSpace int64, productiveSpace int64, usedSpace int64, weight float64, valid int32, relay int32, status int32, timestamp int64, version int32, rebuilding int32, realSpace int64, tx int64, rx int64, other []bson.M, manualWeight int32, unreadable bool, hashID string, blCount int32, filing bool, allocatedSpace int64) *Node {
 	return &Node{ID: id, NodeID: nodeid, PubKey: pubkey, Owner: owner, ProfitAcc: profitAcc, PoolID: poolID, PoolOwner: poolOwner, Quota: quota, Addrs: addrs, CPU: cpu, Memory: memory, Bandwidth: bandwidth, MaxDataSpace: maxDataSpace, AssignedSpace: assignedSpace, ProductiveSpace: productiveSpace, UsedSpace: usedSpace, Weight: weight, Valid: valid, Relay: relay, Status: status, Timestamp: timestamp, Version: version, Rebuilding: rebuilding, RealSpace: realSpace, Tx: tx, Rx: rx, Other: other, ManualWeight: manualWeight, Unreadable: unreadable, HashID: hashID, BlCount: blCount, Filing: filing, AllocatedSpace: allocatedSpace}
 }
 
-//relative DB and collection name
+// relative DB and collection name
 var (
 	MinerTrackerDB   = "minertracker"
 	NodeTab          = "Node"
@@ -213,14 +213,12 @@ func (node *Node) Fillby(msg *pb.NodeMsg) error {
 	node.RealSpace = msg.RealSpace
 	node.Tx = msg.Tx
 	node.Rx = msg.Rx
-	other := bson.A{}
+	var other []bson.M
 	if msg.Ext != "" && msg.Ext[0] == '[' && msg.Ext[len(msg.Ext)-1] == ']' {
-		var bdoc interface{}
-		err := bson.UnmarshalExtJSON([]byte(msg.Ext), true, &bdoc)
+		err := bson.UnmarshalExtJSON([]byte(msg.Ext), true, &other)
 		if err != nil {
 			return err
 		}
-		other, _ = bdoc.(bson.A)
 	}
 	node.Other = other
 	node.ManualWeight = msg.ManualWeight

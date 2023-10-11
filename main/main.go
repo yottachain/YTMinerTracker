@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -15,6 +16,303 @@ import (
 
 func main() {
 	cmd.Execute()
+}
+
+func main1234() {
+	ext := `
+	[{
+		"AvailableTokenNumber": 0,
+		"Ban": false,
+		"Connection": 1,
+		"DownloadData404": 0,
+		"GconfigMd5": "66060e8e57b4ef9ff4ba04947d3805ef",
+		"IndexDBOpt": {
+			"C": 17592186044416,
+			"D": 16384,
+			"M": 78643,
+			"N": 16384,
+			"UseKvDb": false,
+			"readonly": false,
+			"storages": [{
+				"dataBlockSize": 16384,
+				"readonly": false,
+				"storage": "/data/ytfs/storage",
+				"storageSize": 17592186044416,
+				"syncPeriod": 1,
+				"type": 0
+			}],
+			"syncPeriod": 1,
+			"ytfs": "ytfs"
+		},
+		"MediumError": 0,
+		"NoSpaceError": 0,
+		"RXAverageToken": 0,
+		"RXDiskLatency": 0,
+		"RXNetLatency": 0,
+		"RXRequest": 0,
+		"RXRequestToken": 0,
+		"RXSuccess": 0,
+		"RXTest": {
+			"Count": 0,
+			"Success": 0,
+			"UpdateTime": 0
+		},
+		"RXTestConnectRate": {
+			"Count": 0,
+			"Success": 0,
+			"UpdateTime": 0
+		},
+		"RXToken": 0,
+		"RXTokenFillRate": 3,
+		"RangeFullError": 0,
+		"RebuildShardStat": {
+			"AckSuccRebuild": 0,
+			"BackupRebuildSucc": 0,
+			"ColRebuildCount": 0,
+			"ColumnRebuildSucc": 0,
+			"ConcurenGetShard": 0,
+			"ConcurrentTask": 0,
+			"DownloadingCount": 0,
+			"FailRebuild": 0,
+			"FailSendShard": 0,
+			"FailShard": 0,
+			"FailToken": 0,
+			"GlobalRebuildCount": 0,
+			"GlobalRebuildSucc": 0,
+			"RebuildTask": 0,
+			"ReportTask": 0,
+			"RowRebuildCount": 0,
+			"RowRebuildSucc": 0,
+			"RreRebuildSucc": 0,
+			"RunningCount": 0,
+			"SendToken": 0,
+			"Success": 0,
+			"SuccessPutToken": 0,
+			"SuccessRebuild": 0,
+			"failConn": 0,
+			"failDecodeTaskID": 0,
+			"failLessShard": 0,
+			"getShardWkCnt": 0,
+			"passJudge": 0,
+			"shardforRebuild": 0,
+			"successToken": 0,
+			"successVersion": 0,
+			"sucessConn": 0
+		},
+		"ReportTimeUnix": 1658470760,
+		"TXAverageToken": 0,
+		"TXDiskLatency": 0,
+		"TXNetLatency": 0,
+		"TXRequestToken": 0,
+		"TXSuccess": 0,
+		"TXTest": {
+			"Count": 0,
+			"Success": 0,
+			"UpdateTime": 0
+		},
+		"TXTestConnectRate ":{
+			"Count ":0,
+			"Success ":0,
+			"UpdateTime ":0
+		},
+		"TXToken ":0,
+		"TXTokenFillRate ":3,
+		"TokenQueueLen ":200,
+		"UpTime ":1658470279,
+		"UseKvDb ":false,
+		"ytfs_error_count ":0
+	}]
+	`
+	var bdoc []bson.M
+	err := bson.UnmarshalExtJSON([]byte(ext), true, &bdoc)
+	if err != nil {
+		panic(err)
+	}
+	m1, _ := bdoc[0]["IndexDBOpt"].(bson.M)
+	m2, _ := m1["storages"].(bson.A)
+	m3, _ := m2[0].(bson.M)
+	fmt.Println(m3["storage"])
+}
+
+type Node1 struct {
+	//data node index
+	ID int32 `bson:"_id" json:"_id"`
+	//data node ID, generated from PubKey
+	NodeID string `bson:"nodeid" json:"nodeid"`
+	//public key of data node
+	PubKey string `bson:"pubkey" json:"pubkey"`
+	//owner account of this miner
+	Owner string `bson:"owner" json:"owner"`
+	//profit account of this miner
+	ProfitAcc string `bson:"profitAcc" json:"profitAcc"`
+	//ID of associated miner pool
+	PoolID string `bson:"poolID" json:"poolID"`
+	//Owner of associated miner pool
+	PoolOwner string `bson:"poolOwner" json:"poolOwner"`
+	//quota allocated by associated miner pool
+	Quota int64 `bson:"quota" json:"quota"`
+	//listening addresses of data node
+	Addrs []string `bson:"addrs" json:"addrs"`
+	//CPU usage of data node
+	CPU int32 `bson:"cpu" json:"cpu"`
+	//memory usage of data node
+	Memory int32 `bson:"memory" json:"memory"`
+	//bandwidth usage of data node
+	Bandwidth int32 `bson:"bandwidth" json:"bandwidth"`
+	//max space of data node
+	MaxDataSpace int64 `bson:"maxDataSpace" json:"maxDataSpace"`
+	//space assigned to YTFS
+	AssignedSpace int64 `bson:"assignedSpace" json:"assignedSpace"`
+	//pre-allocated space of data node
+	ProductiveSpace int64 `bson:"productiveSpace" json:"productiveSpace"`
+	//used space of data node
+	UsedSpace int64 `bson:"usedSpace" json:"usedSpace"`
+	//used spaces on each SN
+	Uspaces map[string]int64 `bson:"uspaces" json:"uspaces"`
+	//weight for allocate data node
+	Weight float64 `bson:"weight" json:"weight"`
+	//Is node valid
+	Valid int32 `bson:"valid" json:"valid"`
+	//Is relay node
+	Relay int32 `bson:"relay" json:"relay"`
+	//status code: 0 - registered 1 - active
+	Status int32 `bson:"status" json:"status"`
+	//timestamp of status updating operation
+	Timestamp int64 `bson:"timestamp" json:"timestamp"`
+	//version number of miner
+	Version int32 `bson:"version" json:"version"`
+	//Rebuilding if node is under rebuilding
+	Rebuilding int32 `bson:"rebuilding" json:"rebuilding"`
+	//RealSpace real space of miner
+	RealSpace int64 `bson:"realSpace" json:"realSpace"`
+	//Tx
+	Tx int64 `bson:"tx" json:"tx"`
+	//Rx
+	Rx int64 `bson:"rx" json:"rx"`
+	//Other
+	Other bson.A `bson:"other" json:"other"`
+	//ManualWeight
+	ManualWeight int32 `bson:"manualWeight" json:"manualWeight"`
+	//Unreadable
+	Unreadable bool `bson:"unreadable" json:"unreadable"`
+	//HashID
+	HashID string `bson:"hashID"`
+	//BlCount
+	BlCount int32 `bson:"blCount"`
+	//Filing
+	Filing bool `bson:"filing"`
+	//AllocatedSpace
+	AllocatedSpace int64 `bson:"allocatedSpace"`
+	//StableStat
+	StableStat *yt.StableStatistics `bson:"stableStat" json:"stableStat"`
+	//regtime
+	RegTime int64 `bson:"regtime" json:"regtime"`
+}
+
+type Node2 struct {
+	//data node index
+	ID int32 `bson:"_id" json:"_id"`
+	//data node ID, generated from PubKey
+	NodeID string `bson:"nodeid" json:"nodeid"`
+	//public key of data node
+	PubKey string `bson:"pubkey" json:"pubkey"`
+	//owner account of this miner
+	Owner string `bson:"owner" json:"owner"`
+	//profit account of this miner
+	ProfitAcc string `bson:"profitAcc" json:"profitAcc"`
+	//ID of associated miner pool
+	PoolID string `bson:"poolID" json:"poolID"`
+	//Owner of associated miner pool
+	PoolOwner string `bson:"poolOwner" json:"poolOwner"`
+	//quota allocated by associated miner pool
+	Quota int64 `bson:"quota" json:"quota"`
+	//listening addresses of data node
+	Addrs []string `bson:"addrs" json:"addrs"`
+	//CPU usage of data node
+	CPU int32 `bson:"cpu" json:"cpu"`
+	//memory usage of data node
+	Memory int32 `bson:"memory" json:"memory"`
+	//bandwidth usage of data node
+	Bandwidth int32 `bson:"bandwidth" json:"bandwidth"`
+	//max space of data node
+	MaxDataSpace int64 `bson:"maxDataSpace" json:"maxDataSpace"`
+	//space assigned to YTFS
+	AssignedSpace int64 `bson:"assignedSpace" json:"assignedSpace"`
+	//pre-allocated space of data node
+	ProductiveSpace int64 `bson:"productiveSpace" json:"productiveSpace"`
+	//used space of data node
+	UsedSpace int64 `bson:"usedSpace" json:"usedSpace"`
+	//used spaces on each SN
+	Uspaces map[string]int64 `bson:"uspaces" json:"uspaces"`
+	//weight for allocate data node
+	Weight float64 `bson:"weight" json:"weight"`
+	//Is node valid
+	Valid int32 `bson:"valid" json:"valid"`
+	//Is relay node
+	Relay int32 `bson:"relay" json:"relay"`
+	//status code: 0 - registered 1 - active
+	Status int32 `bson:"status" json:"status"`
+	//timestamp of status updating operation
+	Timestamp int64 `bson:"timestamp" json:"timestamp"`
+	//version number of miner
+	Version int32 `bson:"version" json:"version"`
+	//Rebuilding if node is under rebuilding
+	Rebuilding int32 `bson:"rebuilding" json:"rebuilding"`
+	//RealSpace real space of miner
+	RealSpace int64 `bson:"realSpace" json:"realSpace"`
+	//Tx
+	Tx int64 `bson:"tx" json:"tx"`
+	//Rx
+	Rx int64 `bson:"rx" json:"rx"`
+	//Other
+	Other bson.D `bson:"other" json:"other"`
+	//ManualWeight
+	ManualWeight int32 `bson:"manualWeight" json:"manualWeight"`
+	//Unreadable
+	Unreadable bool `bson:"unreadable" json:"unreadable"`
+	//HashID
+	HashID string `bson:"hashID"`
+	//BlCount
+	BlCount int32 `bson:"blCount"`
+	//Filing
+	Filing bool `bson:"filing"`
+	//AllocatedSpace
+	AllocatedSpace int64 `bson:"allocatedSpace"`
+	//StableStat
+	StableStat *yt.StableStatistics `bson:"stableStat" json:"stableStat"`
+	//regtime
+	RegTime int64 `bson:"regtime" json:"regtime"`
+}
+
+func main123() {
+	var mongoURL string = "mongodb://127.0.0.1:27017/?connect=direct"
+	mongoCli, err := mongo.Connect(context.Background(), options.Client().ApplyURI(mongoURL))
+	if err != nil {
+		panic(fmt.Sprintf("creating mongo DB client failed: %s\n", mongoURL))
+	}
+	nodeTab := mongoCli.Database("rebuilder").Collection("Node")
+	node1 := new(Node1)
+	err = nodeTab.FindOne(context.Background(), bson.M{"_id": 10000}).Decode(node1)
+	if err != nil {
+		panic(err)
+	}
+	node2 := new(Node2)
+	err = nodeTab.FindOne(context.Background(), bson.M{"_id": 10000}).Decode(node2)
+	if err != nil {
+		panic(err)
+	}
+	b1, err := json.Marshal(node1)
+	if err != nil {
+		panic(err)
+	}
+	n1 := string(b1)
+	fmt.Println(n1)
+	b2, err := json.Marshal(node2)
+	if err != nil {
+		panic(err)
+	}
+	n2 := string(b2)
+	fmt.Println(n2)
 }
 
 func main1() {
